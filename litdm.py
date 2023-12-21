@@ -2,8 +2,48 @@
 
 import http.client
 import os.path
-from sys import argv
 import threading
+from sys import argv
+
+class statbar:
+    progs = 0
+    cols = int()
+
+    def __init__(self, cols:int, desc:str=None):
+        statbar.cols  = cols
+        if desc:
+            self.progs_char = f"{desc}: "
+            self.progs_char += f"{statbar.progs}/{statbar.cols} "
+            self.progs_char += '['
+        else:
+            self.progs_char += f"{statbar.progs}/{statbar.cols} "
+            self.progs_char  = '['
+        
+    def show(self):
+        print(self.progs_char, end='')
+
+    def refresh(self):
+        print(end='\r')
+    
+    def nextline(self):
+        print(end='\r\n')
+
+    def update(self):
+        if statbar.progs == (statbar.cols - 1):
+            self.progs_char = self.progs_char.replace(str(statbar.progs), str(statbar.progs + 1))
+            self.progs_char += '==='
+            self.progs_char += ']'
+            
+            self.show()
+            self.nextline()
+            statbar.progs += 1
+        else:
+            self.progs_char += '==='
+            self.progs_char = self.progs_char.replace(str(statbar.progs), str(statbar.progs + 1))
+
+            self.show()
+            self.refresh()
+            statbar.progs += 1
 
 class litdm:
     @staticmethod
@@ -56,7 +96,7 @@ class litdm:
         return file_bytes 
 
     @staticmethod
-    def request_and_write(th_count:int ,url:str, file_descriptor, start_byte, end_byte):
+    def request_and_write(status_bar ,th_count:int ,url:str, file_descriptor, start_byte, end_byte):
         start_byte = str(start_byte)
         end_byte   = str(end_byte)
         
@@ -70,8 +110,8 @@ class litdm:
         file_descriptor.seek(int(start_byte))
         file_descriptor.write(file_byte)
         
-        print(f"thread {th_count} done.")
-        
+        status_bar.update()
+
     @staticmethod
     def division_file_byte(filesize:int, ndiv:int) -> list:
         """
@@ -96,12 +136,10 @@ class litdm:
 
         return all_file_byte
 
-    def __init__(self, url: str, filename: str = None, thread_count:int=None):
+    def __init__(self, url: str, filename: str = None):
         self.url = url
-        if thread_count:
-            self.thread_count = thread_count 
-        else:
-            self.thread_count = 5
+        self.thread_count = 7
+
         if filename:
             self.filename = filename
         else:
@@ -109,6 +147,7 @@ class litdm:
             self.filename = os.path.basename(sp_url.path)
 
     def start_threads(self) -> None:
+        status_bar = statbar(cols=(self.thread_count + 1), desc="Downloading")
         direct_link = litdm.follow_location(self.url)
         each_thread = []
         byte_count = 0
@@ -122,7 +161,8 @@ class litdm:
 
         for each_part in all_file_part:
             th = threading.Thread(target = litdm.request_and_write,
-                                        args=(th_count,
+                                        args=(status_bar,
+                                              th_count,
                                               direct_link,
                                               file_descriptor,
                                               byte_count,
