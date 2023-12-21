@@ -138,7 +138,7 @@ class litdm:
 
     def __init__(self, url: str, filename: str = None):
         self.url = url
-        self.thread_count = 7
+        self.thread_count = 8
 
         if filename:
             self.filename = filename
@@ -147,17 +147,15 @@ class litdm:
             self.filename = os.path.basename(sp_url.path)
 
     def start_threads(self) -> None:
-        status_bar = statbar(cols=(self.thread_count + 1), desc="Downloading")
         direct_link = litdm.follow_location(self.url)
         each_thread = []
         byte_count = 0
         filesize = litdm.content_len(direct_link) 
         all_file_part = litdm.division_file_byte(filesize, self.thread_count)
 
-        each_thread1 = []
-
         file_descriptor = open(self.filename, 'wb')
         th_count = len(all_file_part)
+        status_bar = statbar(cols=th_count, desc="Downloading")
 
         for each_part in all_file_part:
             th = threading.Thread(target = litdm.request_and_write,
